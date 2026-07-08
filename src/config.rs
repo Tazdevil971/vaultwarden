@@ -829,6 +829,8 @@ make_config! {
         sso_client_cache_expiration:    u64,    true,   def,    0;
         /// Log all tokens |> `LOG_LEVEL=debug` or `LOG_LEVEL=info,vaultwarden::sso=debug` is required
         sso_debug_tokens:               bool,   true,   def,    false;
+        /// Filter client authentication based on the groups reported by the OIDC provider
+        sso_allowed_groups:             String, true, option;
     },
 
     /// Yubikey settings
@@ -1650,6 +1652,10 @@ impl Config {
 
     pub fn sso_master_password_policy_value(&self) -> Option<serde_json::Value> {
         validate_sso_master_password_policy(self.sso_master_password_policy().as_ref()).ok().flatten()
+    }
+
+    pub fn sso_allowed_groups_vec(&self) -> Option<Vec<String>> {
+        self.sso_allowed_groups().map(|value| value.split_whitespace().map(str::to_owned).collect())
     }
 
     pub fn sso_scopes_vec(&self) -> Vec<String> {

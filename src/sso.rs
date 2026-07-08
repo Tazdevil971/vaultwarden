@@ -305,6 +305,7 @@ pub async fn exchange_code(
         email: email.clone(),
         email_verified,
         user_name: user_name.clone(),
+        groups: user_info.additional_claims().groups.clone(),
     };
 
     debug!("Authenticated user {authenticated_user:?}");

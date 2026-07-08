@@ -1,16 +1,16 @@
 use std::{borrow::Cow, collections::HashSet, future::Future, pin::Pin, sync::LazyLock, time::Duration};
 
 use openidconnect::{
-    AccessToken, AsyncHttpClient, AuthDisplay, AuthPrompt, AuthType, AuthenticationFlow, AuthorizationCode,
-    AuthorizationRequest, ClientId, ClientSecret, CsrfToken, EmptyAdditionalClaims, EmptyExtraTokenFields,
-    EndpointNotSet, EndpointSet, HttpClientError, HttpRequest, HttpResponse, IdTokenClaims, IdTokenFields, Nonce,
-    OAuth2TokenResponse, PkceCodeChallenge, PkceCodeVerifier, RefreshToken, ResponseType, Scope, StandardErrorResponse,
-    StandardTokenResponse,
+    AccessToken, AdditionalClaims, AsyncHttpClient, AuthDisplay, AuthPrompt, AuthType, AuthenticationFlow,
+    AuthorizationCode, AuthorizationRequest, ClientId, ClientSecret, CsrfToken, EmptyAdditionalClaims,
+    EmptyExtraTokenFields, EndpointNotSet, EndpointSet, HttpClientError, HttpRequest, HttpResponse, IdTokenClaims,
+    IdTokenFields, Nonce, OAuth2TokenResponse, PkceCodeChallenge, PkceCodeVerifier, RefreshToken, ResponseType, Scope,
+    StandardErrorResponse, StandardTokenResponse, UserInfoClaims,
     core::{
         CoreAuthDisplay, CoreAuthPrompt, CoreClient, CoreClientAuthMethod, CoreErrorResponseType, CoreGenderClaim,
         CoreIdTokenVerifier, CoreJsonWebKey, CoreJweContentEncryptionAlgorithm, CoreJwsSigningAlgorithm,
         CoreProviderMetadata, CoreResponseType, CoreRevocableToken, CoreRevocationErrorResponse,
-        CoreTokenIntrospectionResponse, CoreTokenResponse, CoreTokenType, CoreUserInfoClaims,
+        CoreTokenIntrospectionResponse, CoreTokenResponse, CoreTokenType,
     },
     http, url,
 };
@@ -55,6 +55,14 @@ pub type CustomClient = openidconnect::Client<
     EndpointSet,
     EndpointSet,
 >;
+
+#[derive(Debug, Deserialize, Serialize)]
+pub struct CustomUserInfoAdditionalClaims {
+    pub groups: Option<Vec<String>>,
+}
+impl AdditionalClaims for CustomUserInfoAdditionalClaims {}
+
+pub type CustomUserInfoClaims = UserInfoClaims<CustomUserInfoAdditionalClaims, CoreGenderClaim>;
 
 pub type RefreshTokenResponse = (Option<String>, String, Option<Duration>);
 
@@ -272,7 +280,7 @@ impl Client {
         }
     }
 
-    pub async fn user_info(&self, access_token: AccessToken) -> ApiResult<CoreUserInfoClaims> {
+    pub async fn user_info(&self, access_token: AccessToken) -> ApiResult<CustomUserInfoClaims> {
         match self.core_client.user_info(access_token, None).request_async(&self.http_client).await {
             Err(err) => err!(format!("Request to user_info endpoint failed: {err}")),
             Ok(user_info) => Ok(user_info),

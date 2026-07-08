@@ -218,6 +218,36 @@ async fn sso_login(
     };
 
     let (sso_auth, user_infos) = sso::exchange_code(code, code_verifier, conn).await?;
+
+    if let Some(allowed_groups) = CONFIG.sso_allowed_groups_vec() {
+        // sso_allowed_groups is enabled, enforce it
+        match &user_infos.groups {
+            Some(groups) if allowed_groups.iter().any(|group| groups.contains(group)) => {
+                // User validated
+            }
+            Some(_) => {
+                error!("Group validation failure, user does not belong to any of the allowed OIDC groups");
+                err_silent!(
+                    "User does not belong to any of the allowed OIDC groups",
+                    ErrorEvent {
+                        event: EventType::UserFailedLogIn
+                    }
+                )
+            }
+            None => {
+                error!(
+                    "Group validation failure, sso_allowed_groups set but OIDC provider did not send any group infos"
+                );
+                err_silent!(
+                    "OIDC provider did not send any group infos",
+                    ErrorEvent {
+                        event: EventType::UserFailedLogIn
+                    }
+                )
+            }
+        }
+    }
+
     let user_with_sso = match SsoUser::find_by_identifier(&user_infos.identifier, conn).await {
         None => match SsoUser::find_by_mail(&user_infos.email, conn).await {
             None => None,
